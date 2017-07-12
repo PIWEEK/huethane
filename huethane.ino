@@ -16,14 +16,14 @@
 #include <WiFi.h>
 #include <SoftwareSerial.h>
 
-char ssid[] = "Kaleidos_2.4";     //  your network SSID (name)
-char pass[] = "KaleidosNet";  // your network password
+char ssid[] = "XXXXXXX";     //  your network SSID (name)
+char pass[] = "XXXXXXX";  // your network password
 int status = WL_IDLE_STATUS;     // the Wifi radio's status
 
-IPAddress server(10,8,1,153);
+IPAddress server(1,1,1,1);
 //IPAddress server2(10,8,1,186);
-const char hueHubIP[] = "10.8.1.153";  // Hue hub IP
-const char hueUsername[] = "Ane1QtgVvSjNsxbvacqhyRL748t25fP8vbx5uIYG";  // Hue username
+const char hueHubIP[] = "1.1.1.1";  // Hue hub IP
+const char hueUsername[] = "USER";  // Hue username
 const int hueHubPort = 80;
 
 SoftwareSerial mySerial(3,2); // pin 2 = TX, pin 3 = RX (unused)
