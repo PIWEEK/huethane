@@ -16,14 +16,14 @@
 #include <WiFi.h>
 #include <SoftwareSerial.h>
 
-char ssid[] = "XXXXXXX";     //  your network SSID (name)
-char pass[] = "XXXXXXX";  // your network password
+char ssid[] = "XXX";     //  your network SSID (name)
+char pass[] = "YYY";  // your network password
 int status = WL_IDLE_STATUS;     // the Wifi radio's status
 
-IPAddress server(1,1,1,1);
+IPAddress server(10,8,1,153);
 //IPAddress server2(10,8,1,186);
-const char hueHubIP[] = "1.1.1.1";  // Hue hub IP
-const char hueUsername[] = "USER";  // Hue username
+const char hueHubIP[] = "10.8.1.153";  // Hue hub IP
+const char hueUsername[] = "ZZZ";  // Hue username
 const int hueHubPort = 80;
 
 SoftwareSerial mySerial(3,2); // pin 2 = TX, pin 3 = RX (unused)
@@ -54,66 +54,73 @@ void setup() {
   Serial.print("You're connected to the network");
   printCurrentNet();
   printWifiData();
-}
-
-int i=0;
-int values[60];
-int valuethreshold = 40;
-void loop() {
 
   delay(1000);
-    
-  int sensorValue = analogRead(A0);
-  int gasoffset = min(sensorValue/2,255);
-  values[i%60] = sensorValue;
-
-  for (int a=0; a<60; a++){
-    if (values[a] > valuethreshold){
-      color = 0;
-      break;
-    }
-    else {
-      color = 25500;
-    }
-    
-  }
-  
-  String command = "{\"on\":true, \"hue\":";
-  command = command + color;
-  command = command + ",\"bri\":";
-  command = command + gasoffset;
-  command = command + "}";
-
-  //sendValue(sensorValue);
-
-  if (i%10==0){
-    setHue(1, command);
-  }
-
-  Serial.println(sensorValue);
+  String command = "{\"on\":true, \"sat\":200, \"hue\":25500,\"bri\":50}";
   Serial.println(command);
-  printLCD(sensorValue);
-
-  i++;
+  setHue(3, command);
+  
 }
 
-//void sendValue(int sensorValue)
-//{
-//
-//  char url[40];
-//  sprintf(url, "GET /?x=%d HTTP/1.1", sensorValue);
-//  
-//  Serial.print("URL: ");
-//  Serial.println(url);
-//  client.stop();
-//  client.connect(server2,8000); 
-//  client.println(url);
-//  client.println("Host: 10.8.1.186");                          
-//  client.println("Connection: close");
-//  client.println();  
-//
-//  
-//}
+int counter = 0;
+float values[60];
+float valuethreshold = 9.0;
+float gasoffset = 0.0;
+bool callibration = true;
+float sensorValue = 150;
+float oldsensorValue = sensorValue;
+bool setColor = true;    
+
+float sensor_volt;
+float RS_air;
+float R0;
+float oldR0;
+
+void loop() {
+   
+    sensorValue = analogRead(A0);
+
+    sensor_volt = sensorValue/1024*5.0;
+    RS_air = (5.0-sensor_volt)/sensor_volt; // omit *RL
+    R0 = RS_air/9.8; // The ratio of RS/R0 is 9.8 in a clear air from Graph (Found using WebPlotDigitizer)
+
+    
+    Serial.print("R0*100: ");
+    Serial.println(R0*100);
+    printLCD(R0*100);
+   
+    int bri = 20;
+    int color = 25500;
+  
+    if (R0 >= (oldR0*1.15)){
+      //something's right
+      bri = 20;
+      color = 25500;
+      setColor= true;
+    }
+
+    if(R0 < (oldR0*0.85)){
+      //something's wrong
+      bri = 200;
+      color = 0;
+      setColor = true;
+    }
+  
+    if (setColor){
+      String command = "{\"on\":true, \"sat\":200, \"hue\":";
+      command = command + color;
+      command = command + ",\"bri\":";
+      command = command + bri;
+      command = command + "}";
+      Serial.println(command);
+      setHue(3, command);
+      oldR0 = R0;
+    }
+    delay(10000);
+    setColor = false;
+    
+}
+
 
 /* setHue() is our main command function, which needs to be passed a light number and a 
  * properly formatted command string in JSON format (basically a Javascript style array of variables
@@ -133,7 +140,7 @@ boolean setHue(int lightNum,String command)
      
 
       Serial.println("if client.connected");
-      //client.println("PUT /api/Ane1QtgVvSjNsxbvacqhyRL748t25fP8vbx5uIYG/lights/1/state HTTP/1.1");
+      //client.println("PUT /api/Ane1QtgVvSjNsxbvacqhyRL748t25fP8vbx5uIYG/lights/3/state HTTP/1.1");
       client.print("PUT /api/");
       client.print(hueUsername);
       client.print("/lights/");
@@ -170,7 +177,7 @@ void printLCD(int value)
   mySerial.write(128);
 
   char message[4];
-  sprintf(message,"Methane level: %d", value);
+  sprintf(message,"R0*100: %d", value);
   mySerial.write(message);
   
 }
